@@ -1,0 +1,233 @@
+diff --git a/index.html b/index.html
+index df16862..d87e6f2 100644
+--- a/index.html
++++ b/index.html
+@@ -7,8 +7,18 @@
+     <meta name="theme-color" content="#FBF6EC" />
+     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='7' width='26' height='19' rx='5' fill='%23F6C9D0' stroke='%233F3633' stroke-width='2'/%3E%3Ccircle cx='16' cy='16.5' r='5.5' fill='%23C9DDEE' stroke='%233F3633' stroke-width='2'/%3E%3Crect x='9' y='4' width='7' height='4' rx='1.5' fill='%233F3633'/%3E%3C/svg%3E" />
+     <title>Sunday Booth · a tiny online photo booth</title>
++    <!-- Google Tag Manager (skipped on localhost and when opened as a local file) -->
++    <script>
++      if (/^https?:$/.test(location.protocol) && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
++        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-PHRDCQS3');
++      }
++    </script>
++    <!-- End Google Tag Manager -->
+   </head>
+   <body>
++    <!-- Google Tag Manager (noscript) -->
++    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PHRDCQS3" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
++    <!-- End Google Tag Manager (noscript) -->
+     <div id="root"></div>
+     <script type="module" src="/src/main.tsx"></script>
+   </body>
+diff --git a/src/App.tsx b/src/App.tsx
+index d99cc16..5ac32c5 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -3,6 +3,7 @@ import type { FilmId } from './lib/filters';
+ import type { Clip } from './lib/recorder';
+ import { DEFAULT_OPTIONS, type StripOptions } from './lib/strip';
+ import { isSoundOn, setSoundOn } from './lib/sound';
++import { track } from './lib/analytics';
+ import { HeartIcon, Logo, Win } from './components/Art';
+ import Landing from './components/Landing';
+ import BoothSelect from './components/BoothSelect';
+@@ -33,21 +34,25 @@ export default function App() {
+ 
+   const go = useCallback((s: Screen) => {
+     setScreen(s);
++    track('booth_step', { step: s });
+     window.scrollTo({ top: 0, behavior: 'smooth' });
+   }, []);
+ 
+   const toggleSound = () => {
+     setSoundOn(!sound);
+     setSound(!sound);
++    track('sound_toggle', { sound_on: !sound });
+   };
+ 
+   const newSet = () => {
++    track('take_another_set');
+     setShots(empty());
+     setClips(empty());
+     setDate(new Date());
+     go('camera');
+   };
+   const startOver = () => {
++    track('start_over');
+     setShots(empty());
+     setClips(empty());
+     setOptions(DEFAULT_OPTIONS);
+@@ -137,7 +142,7 @@ export default function App() {
+         </svg>
+         <div className="gingham px-5 pb-5 pt-3">
+           <p className="mx-auto w-fit rounded-full bg-paper/90 px-4 py-1.5 text-center font-note text-[17px] text-plum-soft">
+-            your photos & videos are made in your browser and never uploaded ♡ no accounts, no cloud
++            your photos & videos are made in your browser and never uploaded ♡ no accounts needed
+           </p>
+         </div>
+       </footer>
+@@ -171,7 +176,8 @@ function About() {
+             <b className="text-berry">Sunday Booth</b> is a tiny photo studio in your browser. Pick a film, pose for four photos, decorate your strip
+             and print it.
+           </p>
+-          <p className="mt-2">Each pose also saves a 3-second video. Everything stays on your device and is gone when you close the tab.</p>
++          <p className="mt-2">Each pose also saves a 3-second video. Your photos and videos stay on your device and are gone when you close the tab.</p>
++          <p className="mt-2 text-[13px] text-plum-soft">We count anonymous visits (like which step people reach) with Google Analytics. It never sees your pictures.</p>
+           <p className="note mt-2">press space on the camera screen to start ♡</p>
+         </Win>
+       )}
+diff --git a/src/components/BoothSelect.tsx b/src/components/BoothSelect.tsx
+index f3ed8e1..0b7f1cd 100644
+--- a/src/components/BoothSelect.tsx
++++ b/src/components/BoothSelect.tsx
+@@ -1,6 +1,7 @@
+ import { useEffect, useState } from 'react';
+ import { FILMS, applyFilm, type FilmId } from '../lib/filters';
+ import { sampleShots } from '../lib/sample';
++import { track } from '../lib/analytics';
+ import { Bow, FlipPhone, Heart, HeartIcon, Sparkle, Star, Win } from './Art';
+ 
+ const PAPER: Record<FilmId, string> = { classic: '#F2EFEF', pink: '#FADDE5', retro: '#FBF0DC', dreamy: '#DCE8F5' };
+@@ -121,7 +122,7 @@ export default function BoothSelect({ film, onChange, onBack, onNext }: Props) {
+         </div>
+ 
+         <div className="relative mt-8 flex flex-col items-center gap-3">
+-          <button className="btn btn-pink btn-lg min-w-[220px]" onClick={onNext}>
++          <button className="btn btn-pink btn-lg min-w-[220px]" onClick={() => { track('film_selected', { film }); onNext(); }}>
+             use {current.name.toLowerCase()} <HeartIcon size={15} />
+           </button>
+           <p className="max-w-sm text-center text-[13px] text-plum-soft">
+diff --git a/src/components/CameraBooth.tsx b/src/components/CameraBooth.tsx
+index 4c66a52..bb02815 100644
+--- a/src/components/CameraBooth.tsx
++++ b/src/components/CameraBooth.tsx
+@@ -4,6 +4,7 @@ import { captureFrame, getFiltered, getThumb } from '../lib/photos';
+ import { canRecord, startClip, type ClipRecorder } from '../lib/recorder';
+ import { playShutter, playTick } from '../lib/sound';
+ import { useCamera } from '../lib/useCamera';
++import { track } from '../lib/analytics';
+ import { Badge, Bow, Cherry, Heart, HeartIcon, Sparkle, Star, Win } from './Art';
+ import type { Clips, Shots } from '../App';
+ 
+@@ -58,7 +59,9 @@ export default function CameraBooth({ film, onFilmChange, shots, onShotsChange,
+   );
+   useEffect(() => {
+     if (cam.status !== 'ready') cancel();
+-  }, [cam.status, cancel]);
++    if (cam.status === 'ready') track('camera_ready');
++    if (cam.status === 'error' && cam.error) track('camera_error', { reason: cam.error.kind });
++  }, [cam.status, cam.error, cancel]);
+ 
+   const run = useCallback(
+     async (indices: number[]) => {
+@@ -67,6 +70,7 @@ export default function CameraBooth({ film, onFilmChange, shots, onShotsChange,
+       const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+       setRunning(true);
+       setSelected(null);
++      track(indices.length === 1 ? 'photo_retake' : 'session_started', { film, photos: indices.length });
+       for (let k = 0; k < indices.length; k++) {
+         const idx = indices[k];
+         setActive(idx);
+@@ -108,6 +112,7 @@ export default function CameraBooth({ film, onFilmChange, shots, onShotsChange,
+       setActive(null);
+       setRunning(false);
+       setCheer(null);
++      if (indices.length > 1) track('session_complete', { film });
+     },
+     [cam.videoRef, cancel, film, onShotsChange, onClipsChange],
+   );
+diff --git a/src/components/Customize.tsx b/src/components/Customize.tsx
+index e3bc0ae..75b3791 100644
+--- a/src/components/Customize.tsx
++++ b/src/components/Customize.tsx
+@@ -4,6 +4,7 @@ import { BACKGROUNDS, BORDERS, MAX_STICKERS, PATTERNS, PRESETS, type CaptionFont
+ import { STICKERS, STICKER_KINDS } from '../lib/stickers';
+ import { Bow, Cherry, DoodleArrow, Heart, HeartIcon, Sparkle, Star, Win } from './Art';
+ import { StickerIcon, StripCanvas } from './StripCanvas';
++import { track } from '../lib/analytics';
+ import type { Shots } from '../App';
+ 
+ interface Props {
+@@ -170,7 +171,18 @@ export default function Customize({ film, shots, options: o, onChange, date, onB
+ 
+             <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+               <button className="btn btn-soft" onClick={onBack}>← back</button>
+-              <button className="btn btn-pink btn-lg" onClick={onPrint}>
++              <button
++                className="btn btn-pink btn-lg"
++                onClick={() => {
++                  track('strip_printed', {
++                    film,
++                    theme: activePreset?.id ?? 'custom',
++                    stickers: o.stickers.length,
++                    has_caption: Boolean(o.caption.trim()),
++                  });
++                  onPrint();
++                }}
++              >
+                 print my memories <HeartIcon size={15} />
+               </button>
+             </div>
+diff --git a/src/components/PrintReveal.tsx b/src/components/PrintReveal.tsx
+index 58f5183..f851727 100644
+--- a/src/components/PrintReveal.tsx
++++ b/src/components/PrintReveal.tsx
+@@ -4,6 +4,7 @@ import { getFiltered } from '../lib/photos';
+ import { downloadClip } from '../lib/recorder';
+ import { downloadStrip, layout, renderStrip, stripToBlob, type StripOptions } from '../lib/strip';
+ import { playDing, playPrinter } from '../lib/sound';
++import { track } from '../lib/analytics';
+ import { Bow, CD, Cherry, Heart, HeartIcon, Printer, RetroTV, Sparkle, Star, Win } from './Art';
+ import { fontsReady } from './StripCanvas';
+ import type { Clips, Shots } from '../App';
+@@ -67,6 +68,7 @@ export default function PrintReveal({ film, shots, clips, options, date, onAgain
+     setSaving('saving');
+     try {
+       await downloadStrip(shots.map((s) => (s ? getFiltered(s, film) : null)), options, date);
++      track('download_strip', { film });
+       setSaving('saved');
+       setTimeout(() => setSaving('idle'), 2400);
+     } catch {
+@@ -189,6 +191,7 @@ function PoseVideos({ clips, film, date }: { clips: Clips; film: FilmId; date: D
+     else v.pause();
+   };
+   const again = () => {
++    track('watch_again', { pose: index + 1 });
+     const v = videoRef.current;
+     if (!v) return;
+     v.currentTime = 0;
+@@ -288,6 +291,7 @@ function PoseVideos({ clips, film, date }: { clips: Clips; film: FilmId; date: D
+           onClick={() => {
+             if (!clip) return;
+             downloadClip(clip, `sunday-booth-pose-${index + 1}-${ymd(date)}`);
++            track('download_video', { pose: index + 1, format: clip.ext });
+             setSaved(true);
+             setTimeout(() => setSaved(false), 2200);
+           }}
+diff --git a/src/lib/analytics.ts b/src/lib/analytics.ts
+new file mode 100644
+index 0000000..f7b31b3
+--- /dev/null
++++ b/src/lib/analytics.ts
+@@ -0,0 +1,19 @@
++// Sends small, anonymous events to Google Tag Manager's dataLayer.
++// Only step names, film names and counts are sent — never photos, videos or captions.
++
++type Params = Record<string, string | number | boolean>;
++
++declare global {
++  interface Window {
++    dataLayer?: unknown[];
++  }
++}
++
++export function track(event: string, params: Params = {}) {
++  try {
++    window.dataLayer = window.dataLayer || [];
++    window.dataLayer.push({ event, ...params });
++  } catch {
++    /* analytics must never break the booth */
++  }
++}

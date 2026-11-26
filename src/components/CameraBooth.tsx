@@ -4,6 +4,7 @@ import { captureFrame, getFiltered, getThumb } from '../lib/photos';
 import { canRecord, startClip, type ClipRecorder } from '../lib/recorder';
 import { playShutter, playTick } from '../lib/sound';
 import { useCamera } from '../lib/useCamera';
+import { track } from '../lib/analytics';
 import { Badge, Bow, Cherry, Heart, HeartIcon, Sparkle, Star, Win } from './Art';
 import type { Clips, Shots } from '../App';
 
@@ -58,7 +59,9 @@ export default function CameraBooth({ film, onFilmChange, shots, onShotsChange, 
   );
   useEffect(() => {
     if (cam.status !== 'ready') cancel();
-  }, [cam.status, cancel]);
+    if (cam.status === 'ready') track('camera_ready');
+    if (cam.status === 'error' && cam.error) track('camera_error', { reason: cam.error.kind });
+  }, [cam.status, cam.error, cancel]);
 
   const run = useCallback(
     async (indices: number[]) => {
@@ -67,6 +70,7 @@ export default function CameraBooth({ film, onFilmChange, shots, onShotsChange, 
       const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
       setRunning(true);
       setSelected(null);
+      track(indices.length === 1 ? 'photo_retake' : 'session_started', { film, photos: indices.length });
       for (let k = 0; k < indices.length; k++) {
         const idx = indices[k];
         setActive(idx);
@@ -108,6 +112,7 @@ export default function CameraBooth({ film, onFilmChange, shots, onShotsChange, 
       setActive(null);
       setRunning(false);
       setCheer(null);
+      if (indices.length > 1) track('session_complete', { film });
     },
     [cam.videoRef, cancel, film, onShotsChange, onClipsChange],
   );

@@ -3,6 +3,7 @@ import type { FilmId } from './lib/filters';
 import type { Clip } from './lib/recorder';
 import { DEFAULT_OPTIONS, type StripOptions } from './lib/strip';
 import { isSoundOn, setSoundOn } from './lib/sound';
+import { track } from './lib/analytics';
 import { HeartIcon, Logo, Win } from './components/Art';
 import Landing from './components/Landing';
 import BoothSelect from './components/BoothSelect';
@@ -33,21 +34,25 @@ export default function App() {
 
   const go = useCallback((s: Screen) => {
     setScreen(s);
+    track('booth_step', { step: s });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const toggleSound = () => {
     setSoundOn(!sound);
     setSound(!sound);
+    track('sound_toggle', { sound_on: !sound });
   };
 
   const newSet = () => {
+    track('take_another_set');
     setShots(empty());
     setClips(empty());
     setDate(new Date());
     go('camera');
   };
   const startOver = () => {
+    track('start_over');
     setShots(empty());
     setClips(empty());
     setOptions(DEFAULT_OPTIONS);
@@ -137,7 +142,7 @@ export default function App() {
         </svg>
         <div className="gingham px-5 pb-5 pt-3">
           <p className="mx-auto w-fit rounded-full bg-paper/90 px-4 py-1.5 text-center font-note text-[17px] text-plum-soft">
-            your photos & videos are made in your browser and never uploaded ♡ no accounts, no cloud
+            your photos & videos are made in your browser and never uploaded ♡ no accounts needed
           </p>
         </div>
       </footer>
@@ -171,7 +176,8 @@ function About() {
             <b className="text-berry">Sunday Booth</b> is a tiny photo studio in your browser. Pick a film, pose for four photos, decorate your strip
             and print it.
           </p>
-          <p className="mt-2">Each pose also saves a 3-second video. Everything stays on your device and is gone when you close the tab.</p>
+          <p className="mt-2">Each pose also saves a 3-second video. Your photos and videos stay on your device and are gone when you close the tab.</p>
+          <p className="mt-2 text-[13px] text-plum-soft">We count anonymous visits (like which step people reach) with Google Analytics. It never sees your pictures.</p>
           <p className="note mt-2">press space on the camera screen to start ♡</p>
         </Win>
       )}

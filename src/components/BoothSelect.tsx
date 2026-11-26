@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FILMS, applyFilm, type FilmId } from '../lib/filters';
 import { sampleShots } from '../lib/sample';
+import { track } from '../lib/analytics';
 import { Bow, FlipPhone, Heart, HeartIcon, Sparkle, Star, Win } from './Art';
 
 const PAPER: Record<FilmId, string> = { classic: '#F2EFEF', pink: '#FADDE5', retro: '#FBF0DC', dreamy: '#DCE8F5' };
@@ -121,7 +122,7 @@ export default function BoothSelect({ film, onChange, onBack, onNext }: Props) {
         </div>
 
         <div className="relative mt-8 flex flex-col items-center gap-3">
-          <button className="btn btn-pink btn-lg min-w-[220px]" onClick={onNext}>
+          <button className="btn btn-pink btn-lg min-w-[220px]" onClick={() => { track('film_selected', { film }); onNext(); }}>
             use {current.name.toLowerCase()} <HeartIcon size={15} />
           </button>
           <p className="max-w-sm text-center text-[13px] text-plum-soft">

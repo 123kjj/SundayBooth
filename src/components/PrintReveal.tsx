@@ -4,6 +4,7 @@ import { getFiltered } from '../lib/photos';
 import { downloadClip } from '../lib/recorder';
 import { downloadStrip, layout, renderStrip, stripToBlob, type StripOptions } from '../lib/strip';
 import { playDing, playPrinter } from '../lib/sound';
+import { track } from '../lib/analytics';
 import { Bow, CD, Cherry, Heart, HeartIcon, Printer, RetroTV, Sparkle, Star, Win } from './Art';
 import { fontsReady } from './StripCanvas';
 import type { Clips, Shots } from '../App';
@@ -67,6 +68,7 @@ export default function PrintReveal({ film, shots, clips, options, date, onAgain
     setSaving('saving');
     try {
       await downloadStrip(shots.map((s) => (s ? getFiltered(s, film) : null)), options, date);
+      track('download_strip', { film });
       setSaving('saved');
       setTimeout(() => setSaving('idle'), 2400);
     } catch {
@@ -189,6 +191,7 @@ function PoseVideos({ clips, film, date }: { clips: Clips; film: FilmId; date: D
     else v.pause();
   };
   const again = () => {
+    track('watch_again', { pose: index + 1 });
     const v = videoRef.current;
     if (!v) return;
     v.currentTime = 0;
@@ -288,6 +291,7 @@ function PoseVideos({ clips, film, date }: { clips: Clips; film: FilmId; date: D
           onClick={() => {
             if (!clip) return;
             downloadClip(clip, `sunday-booth-pose-${index + 1}-${ymd(date)}`);
+            track('download_video', { pose: index + 1, format: clip.ext });
             setSaved(true);
             setTimeout(() => setSaved(false), 2200);
           }}

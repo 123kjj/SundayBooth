@@ -4,6 +4,7 @@ import { BACKGROUNDS, BORDERS, MAX_STICKERS, PATTERNS, PRESETS, type CaptionFont
 import { STICKERS, STICKER_KINDS } from '../lib/stickers';
 import { Bow, Cherry, DoodleArrow, Heart, HeartIcon, Sparkle, Star, Win } from './Art';
 import { StickerIcon, StripCanvas } from './StripCanvas';
+import { track } from '../lib/analytics';
 import type { Shots } from '../App';
 
 interface Props {
@@ -170,7 +171,18 @@ export default function Customize({ film, shots, options: o, onChange, date, onB
 
             <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
               <button className="btn btn-soft" onClick={onBack}>← back</button>
-              <button className="btn btn-pink btn-lg" onClick={onPrint}>
+              <button
+                className="btn btn-pink btn-lg"
+                onClick={() => {
+                  track('strip_printed', {
+                    film,
+                    theme: activePreset?.id ?? 'custom',
+                    stickers: o.stickers.length,
+                    has_caption: Boolean(o.caption.trim()),
+                  });
+                  onPrint();
+                }}
+              >
                 print my memories <HeartIcon size={15} />
               </button>
             </div>
